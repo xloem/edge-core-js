@@ -2,7 +2,7 @@
 
 import aesjs from 'aes-js'
 
-import type { EdgeIo } from '../../edge-core-index.js'
+import type { EdgeIo, EdgeJsonBox } from '../../edge-core-index.js'
 import { base16, base64 } from '../encoding.js'
 import { hashjs } from './external.js'
 
@@ -12,6 +12,35 @@ export interface JsonBox {
   encryptionType: number;
   data_base64: string;
   iv_hex: string;
+}
+
+/**
+ * @param io an EdgeIo object
+ * @param box an Airbitz JSON encryption box
+ * @param key a key, as an ArrayBuffer
+ */
+export async function decryptAsync (
+  io: EdgeIo,
+  box: EdgeJsonBox | string,
+  key: Uint8Array
+): Promise<Uint8Array> {
+  let boxObj, boxString
+  if (io.encryptedJsonBox) {
+    const decrypt = io.encryptedJsonBox.decryptJsonBox
+    if (typeof box === 'string') {
+      return decrypt(box, key)
+    } else {
+      boxString = JSON.stringify(box)
+      return decrypt(boxString, key)
+    }
+  } else {
+    if (typeof box === 'string') {
+      boxObj = JSON.parse(box)
+      return decrypt(boxObj, key)
+    } else {
+      return decrypt(box, key)
+    }
+  }
 }
 
 /**

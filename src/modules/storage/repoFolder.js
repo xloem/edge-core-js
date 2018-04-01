@@ -1,4 +1,4 @@
-import { decrypt, encrypt } from '../../util/crypto/crypto.js'
+import { decryptAsync, encrypt } from '../../util/crypto/crypto.js'
 import { utf8 } from '../../util/encoding.js'
 
 /**
@@ -16,14 +16,17 @@ class RepoFile {
   }
 
   getData () {
-    return this.file
-      .getText()
-      .then(text => JSON.parse(text))
-      .then(json => decrypt(json, this.dataKey))
+    return this.file.getText().then(json => {
+      const out = decryptAsync(this.io, json, this.dataKey)
+      return out
+    })
   }
 
   getText () {
-    return this.getData().then(data => utf8.stringify(data))
+    return this.getData().then(data => {
+      const out = utf8.stringify(data)
+      return out
+    })
   }
 
   setData (data) {

@@ -34,6 +34,10 @@ export function fixIo (io: EdgeRawIo): EdgeIo {
     out.secp256k1 = io.secp256k1
   }
 
+  if (io.encryptedJsonBox) {
+    out.encryptedJsonBox = io.encryptedJsonBox
+  }
+
   if (io.pbkdf2) {
     out.pbkdf2 = io.pbkdf2
   }

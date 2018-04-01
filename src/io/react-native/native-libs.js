@@ -23,14 +23,15 @@ try {
 export { randomBytes }
 
 // Crypto stuff:
-let pbkdf2, scrypt, secp256k1
+let pbkdf2, scrypt, secp256k1, encryptedJsonBox
 try {
   let crypto = require('react-native-fast-crypto')
   // The React Native bundler seems to have trouble with default exports:
   if (crypto.default && !crypto.scrypt) crypto = crypto.default
 
+  encryptedJsonBox = crypto.encryptedJsonBox
   pbkdf2 = crypto.pbkdf2
   scrypt = crypto.scrypt
   secp256k1 = crypto.secp256k1
 } catch (e) {}
-export { pbkdf2, scrypt, secp256k1 }
+export { pbkdf2, scrypt, secp256k1, encryptedJsonBox }

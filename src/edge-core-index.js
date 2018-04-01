@@ -85,6 +85,19 @@ export type EdgePbkdf2 = {
   ) => Promise<Uint8Array>
 }
 
+export type EdgeJsonBox = {
+  encryptionType: number,
+  data_base64: string,
+  iv_hex: string
+}
+
+export type EdgeEncryptedJsonBox = {
+  decryptJsonBox: (
+    jsonBox: EdgeJsonBox | string,
+    key: Uint8Array
+  ) => Promise<Uint8Array>
+}
+
 /**
  * Access to platform-specific resources, with many optional fields.
  * The core will emulate/adapt whatever is missing.
@@ -95,6 +108,7 @@ export type EdgeRawIo = {
   +scrypt?: EdgeScryptFunction,
   +secp256k1?: EdgeSecp256k1,
   +pbkdf2?: EdgePbkdf2,
+  +encryptedJsonBox?: EdgeEncryptedJsonBox,
 
   // Local io:
   +console?: EdgeConsole,
@@ -120,6 +134,7 @@ export type EdgeIo = {
   // TODO: Make these two non-optional, providing JS versions as needed:
   +secp256k1?: EdgeSecp256k1,
   +pbkdf2?: EdgePbkdf2,
+  +encryptedJsonBox?: EdgeEncryptedJsonBox,
 
   // Local io:
   +console: EdgeConsole,
