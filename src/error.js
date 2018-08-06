@@ -19,7 +19,10 @@ export const errorNames = {
   ObsoleteApiError: 'ObsoleteApiError',
   OtpError: 'OtpError',
   PasswordError: 'PasswordError',
-  UsernameError: 'UsernameError'
+  PendingFundsError: 'PendingFundsError',
+  SameCurrencyError: 'SameCurrencyError',
+  UsernameError: 'UsernameError',
+  NoAmountSpecifiedError: 'NoAmountSpecifiedError'
 }
 
 /**
@@ -37,6 +40,18 @@ export function DustSpendError (message = 'Please send a larger amount') {
 export function InsufficientFundsError (message = 'Insufficient funds') {
   const e = new Error(message)
   e.name = errorNames.InsufficientFundsError
+  return e
+}
+
+/**
+ * Attempting to create a MakeSpend without specifying an amount of currency to send
+ */
+
+export function NoAmountSpecifiedError (
+  message = 'Unable to create zero-amount transaction.'
+) {
+  const e = new Error(message)
+  e.name = errorNames.NoAmountSpecifiedError
   return e
 }
 
@@ -96,6 +111,26 @@ export function PasswordError (resultsJson = {}, message = 'Invalid password') {
   const e = new Error(message)
   e.name = e.type = errorNames.PasswordError
   e.wait = resultsJson.wait_seconds
+  return e
+}
+
+/**
+ * Trying to spend funds that are not yet confirmed.
+ */
+export function PendingFundsError (message = 'Not enough confirmed funds') {
+  const e = new Error(message)
+  e.name = errorNames.PendingFundsError
+  return e
+}
+
+/**
+ * Attempting to shape shift between two wallets of same currency.
+ */
+export function SameCurrencyError (
+  message = 'Wallets can not be the same currency'
+) {
+  const e = new Error(message)
+  e.name = errorNames.SameCurrencyError
   return e
 }
 

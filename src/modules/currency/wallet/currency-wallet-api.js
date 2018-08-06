@@ -1,32 +1,45 @@
 // @flow
 
-import { add, div, lte, sub } from 'biggystring'
+import { add, div, lte, mul, sub } from 'biggystring'
 
 import type {
+  EdgeCoinExchangeQuote,
+  EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyPlugin,
   EdgeCurrencyWallet,
   EdgeDataDump,
   EdgeEncodeUri,
+  EdgeGetTransactionsOptions,
   EdgeMetadata,
+  EdgePaymentProtocolInfo,
   EdgeReceiveAddress,
   EdgeSpendInfo,
   EdgeSpendTarget,
   EdgeTokenInfo,
   EdgeTransaction
 } from '../../../edge-core-index.js'
+import { SameCurrencyError } from '../../../error.js'
 import { wrapObject } from '../../../util/api.js'
 import { filterObject, mergeDeeply } from '../../../util/util.js'
 import { makeShapeshiftApi } from '../../exchange/shapeshift.js'
+import type { ShapeShiftExactQuoteReply } from '../../exchange/shapeshift.js'
 import type { ApiInput } from '../../root.js'
-import { makeStorageWalletApi } from '../../storage/storageApi.js'
+import { makeStorageWalletApi } from '../../storage/storage-api.js'
+import { getCurrencyMultiplier } from '../currency-selectors.js'
+import {
+  exportTransactionsToCSVInner,
+  exportTransactionsToQBOInner
+} from './currency-wallet-export.js'
 import {
   loadTxFiles,
   renameCurrencyWallet,
   setCurrencyWalletFiat,
   setCurrencyWalletTxMetadata
 } from './currency-wallet-files.js'
+import type { TransactionFile } from './currency-wallet-files.js'
 import type { CurrencyWalletInput } from './currency-wallet-pixie.js'
+import type { MergedTransaction } from './currency-wallet-reducer.js'
 
 const fakeMetadata = {
   bizId: 0,
@@ -76,7 +89,7 @@ export function makeCurrencyWalletApi (
       return input.props.selfState.name
     },
     renameWallet (name: string) {
-      return renameCurrencyWallet(input, name)
+      return renameCurrencyWallet(input, name).then(() => {})
     },
 
     // Currency info:
@@ -87,7 +100,7 @@ export function makeCurrencyWalletApi (
       return plugin.currencyInfo
     },
     setFiatCurrencyCode (fiatCurrencyCode: string) {
-      return setCurrencyWalletFiat(input, fiatCurrencyCode)
+      return setCurrencyWalletFiat(input, fiatCurrencyCode).then(() => {})
     },
 
     // Running state:
@@ -118,7 +131,7 @@ export function makeCurrencyWalletApi (
 
     // Transactions:
     '@getBalance': { sync: true },
-    getBalance (opts: any) {
+    getBalance (opts: EdgeCurrencyCodeOptions = {}) {
       return engine.getBalance(opts)
     },
 
@@ -127,7 +140,14 @@ export function makeCurrencyWalletApi (
       return engine.getBlockHeight()
     },
 
-    async getTransactions (opts: any = {}): Promise<Array<EdgeTransaction>> {
+    '@getNumTransactions': { sync: true },
+    getNumTransactions (opts: EdgeCurrencyCodeOptions = {}) {
+      return engine.getNumTransactions(opts)
+    },
+
+    async getTransactions (
+      opts: EdgeGetTransactionsOptions = {}
+    ): Promise<Array<EdgeTransaction>> {
       const defaultCurrency = plugin.currencyInfo.currencyCode
       const currencyCode = opts.currencyCode || defaultCurrency
       const state = input.props.selfState
@@ -135,7 +155,7 @@ export function makeCurrencyWalletApi (
       const txids = state.txids
       // Merged tx data from metadata files and blockchain data
       const txs = state.txs
-      const { numIndex = 0, numEntries = txids.length } = opts
+      const { startIndex = 0, startEntries = txids.length } = opts
       // Decrypted metadata files
       const files = state.files
       // A sorted list of transaction based on chronological order
@@ -150,7 +170,7 @@ export function makeCurrencyWalletApi (
         }
       }
       const slicedTransactions = slice
-        ? sortedTransactions.slice(numIndex, numEntries)
+        ? sortedTransactions.slice(startIndex, startIndex + startEntries)
         : sortedTransactions
       const missingTxIdHashes = slicedTransactions.filter(
         txidHash => !files[txidHash]
@@ -158,7 +178,7 @@ export function makeCurrencyWalletApi (
       const missingFiles = await loadTxFiles(input, missingTxIdHashes)
       Object.assign(files, missingFiles)
 
-      const out = []
+      const out: Array<EdgeTransaction> = []
       for (const txidHash of slicedTransactions) {
         const file = files[txidHash]
         const tx = txs[file.txid]
@@ -176,7 +196,50 @@ export function makeCurrencyWalletApi (
       return out
     },
 
-    getReceiveAddress (opts: any): Promise<EdgeReceiveAddress> {
+    async exportTransactionsToQBO (
+      opts: EdgeGetTransactionsOptions
+    ): Promise<string> {
+      const edgeTransactions: Array<
+        EdgeTransaction
+      > = await this.getTransactions(opts)
+      const currencyCode =
+        opts && opts.currencyCode
+          ? opts.currencyCode
+          : input.props.selfState.currencyInfo.currencyCode
+      const denom = opts && opts.denomination ? opts.denomination : null
+      const qbo: string = exportTransactionsToQBOInner(
+        edgeTransactions,
+        currencyCode,
+        this.fiatCurrencyCode,
+        denom,
+        Date.now()
+      )
+      return qbo
+    },
+
+    async exportTransactionsToCSV (
+      opts: EdgeGetTransactionsOptions
+    ): Promise<string> {
+      const edgeTransactions: Array<
+        EdgeTransaction
+      > = await this.getTransactions(opts)
+      const currencyCode =
+        opts && opts.currencyCode
+          ? opts.currencyCode
+          : input.props.selfState.currencyInfo.currencyCode
+      const denom = opts && opts.denomination ? opts.denomination : null
+      const csv: string = await exportTransactionsToCSVInner(
+        edgeTransactions,
+        currencyCode,
+        this.fiatCurrencyCode,
+        denom
+      )
+      return csv
+    },
+
+    getReceiveAddress (
+      opts: EdgeCurrencyCodeOptions = {}
+    ): Promise<EdgeReceiveAddress> {
       const freshAddress = engine.getFreshAddress(opts)
       const receiveAddress: EdgeReceiveAddress = {
         metadata: fakeMetadata,
@@ -207,70 +270,144 @@ export function makeCurrencyWalletApi (
     },
 
     async makeSpend (spendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
-      if (spendInfo.spendTargets[0].destWallet) {
-        const destWallet = spendInfo.spendTargets[0].destWallet
-        const currentCurrencyCode = spendInfo.currencyCode
-          ? spendInfo.currencyCode
-          : plugin.currencyInfo.currencyCode
-        const destCurrencyCode = spendInfo.spendTargets[0].currencyCode
-          ? spendInfo.spendTargets[0].currencyCode
-          : destWallet.currencyInfo.currencyCode
-        if (destCurrencyCode !== currentCurrencyCode) {
-          const edgeFreshAddress = engine.getFreshAddress()
-          const edgeReceiveAddress = await destWallet.getReceiveAddress()
+      return engine.makeSpend(spendInfo)
+    },
 
-          let destPublicAddress
-          if (edgeReceiveAddress.legacyAddress) {
-            destPublicAddress = edgeReceiveAddress.legacyAddress
-          } else {
-            destPublicAddress = edgeReceiveAddress.publicAddress
-          }
+    async sweepPrivateKeys (spendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
+      if (!engine.sweepPrivateKeys) {
+        return Promise.reject(
+          new Error('Sweeping this currency is not supported.')
+        )
+      }
+      return engine.sweepPrivateKeys(spendInfo)
+    },
 
-          let currentPublicAddress
-          if (edgeFreshAddress.legacyAddress) {
-            currentPublicAddress = edgeFreshAddress.legacyAddress
-          } else {
-            currentPublicAddress = edgeFreshAddress.publicAddress
-          }
-          const exchangeData = await shapeshiftApi.getSwapAddress(
-            currentCurrencyCode,
-            destCurrencyCode,
-            currentPublicAddress,
-            destPublicAddress
-          )
+    async getQuote (spendInfo: EdgeSpendInfo): Promise<EdgeCoinExchangeQuote> {
+      const destWallet = spendInfo.spendTargets[0].destWallet
+      if (!destWallet) {
+        throw new SameCurrencyError()
+      }
+      const currentCurrencyCode = spendInfo.currencyCode
+        ? spendInfo.currencyCode
+        : plugin.currencyInfo.currencyCode
+      const destCurrencyCode = spendInfo.spendTargets[0].currencyCode
+        ? spendInfo.spendTargets[0].currencyCode
+        : destWallet.currencyInfo.currencyCode
+      if (destCurrencyCode === currentCurrencyCode) {
+        throw new SameCurrencyError()
+      }
+      const edgeFreshAddress = engine.getFreshAddress({
+        currencyCode: destCurrencyCode
+      })
+      const edgeReceiveAddress = await destWallet.getReceiveAddress()
 
-          let nativeAmount = spendInfo.nativeAmount
-          const destAmount = spendInfo.spendTargets[0].nativeAmount
-
-          if (destAmount) {
-            const rate = await shapeshiftApi.getExchangeSwapRate(
-              currentCurrencyCode,
-              destCurrencyCode
-            )
-            nativeAmount = div(destAmount, rate.toString())
-          }
-
-          const spendTarget: EdgeSpendTarget = {
-            nativeAmount: nativeAmount,
-            publicAddress: exchangeData.deposit
-          }
-
-          const exchangeSpendInfo: EdgeSpendInfo = {
-            networkFeeOption: spendInfo.networkFeeOption,
-            currencyCode: spendInfo.currencyCode,
-            spendTargets: [spendTarget]
-          }
-
-          const tx = await engine.makeSpend(exchangeSpendInfo)
-
-          tx.otherParams = tx.otherParams || {}
-          tx.otherParams.exchangeData = exchangeData
-          return tx
-        }
-        // transfer same currency from one wallet to another
+      let destPublicAddress
+      if (edgeReceiveAddress.legacyAddress) {
+        destPublicAddress = edgeReceiveAddress.legacyAddress
+      } else {
+        destPublicAddress = edgeReceiveAddress.publicAddress
       }
 
-      return engine.makeSpend(spendInfo)
+      let currentPublicAddress
+      if (edgeFreshAddress.legacyAddress) {
+        currentPublicAddress = edgeFreshAddress.legacyAddress
+      } else {
+        currentPublicAddress = edgeFreshAddress.publicAddress
+      }
+
+      const nativeAmount = spendInfo.nativeAmount
+      const quoteFor = spendInfo.quoteFor
+      if (!quoteFor) {
+        throw new Error('Need to define direction for quoteFor')
+      }
+      const destAmount = spendInfo.spendTargets[0].nativeAmount
+      /* console.log('core: destAmount', destAmount) */
+      // here we are going to get multipliers
+      const currencyInfos = ai.props.state.currency.infos
+      const tokenInfos = ai.props.state.currency.customTokens
+      const multiplierFrom = getCurrencyMultiplier(
+        currencyInfos,
+        tokenInfos,
+        currentCurrencyCode
+      )
+      const multiplierTo = getCurrencyMultiplier(
+        currencyInfos,
+        tokenInfos,
+        destCurrencyCode
+      )
+
+      /* if (destAmount) {
+        nativeAmount = destAmount
+      } */
+      if (!nativeAmount) {
+        throw new Error('Need to define a native amount')
+      }
+      const nativeAmountForQuote = destAmount || nativeAmount
+
+      const quoteData: ShapeShiftExactQuoteReply = await shapeshiftApi.getexactQuote(
+        currentCurrencyCode,
+        destCurrencyCode,
+        currentPublicAddress,
+        destPublicAddress,
+        nativeAmountForQuote,
+        quoteFor,
+        multiplierFrom,
+        multiplierTo
+      )
+      if (!quoteData.success) {
+        throw new Error('Did not get back successful quote')
+      }
+      const exchangeData = quoteData.success
+      const nativeAmountForSpend = destAmount
+        ? mul(exchangeData.depositAmount, multiplierFrom)
+        : nativeAmount
+
+      const hasDestTag = exchangeData.deposit.indexOf('?dt=') !== -1
+      let destTag
+      if (hasDestTag) {
+        const splitArray = exchangeData.deposit.split('?dt=')
+        exchangeData.deposit = splitArray[0]
+        destTag = splitArray[1]
+      }
+
+      const spendTarget: EdgeSpendTarget = {
+        nativeAmount: nativeAmountForSpend,
+        publicAddress: exchangeData.deposit
+      }
+      if (hasDestTag) {
+        spendTarget.otherParams = {
+          uniqueIdentifier: destTag
+        }
+      }
+      if (currentCurrencyCode === 'XMR' && exchangeData.sAddress) {
+        const paymentId = exchangeData.deposit
+        spendTarget.publicAddress = exchangeData.sAddress
+        spendTarget.otherParams = {
+          uniqueIdentifier: paymentId
+        }
+      }
+
+      const exchangeSpendInfo: EdgeSpendInfo = {
+        // networkFeeOption: spendInfo.networkFeeOption,
+        currencyCode: spendInfo.currencyCode,
+        spendTargets: [spendTarget]
+      }
+      const tx = await engine.makeSpend(exchangeSpendInfo)
+      tx.otherParams = tx.otherParams || {}
+      tx.otherParams.exchangeData = exchangeData
+      const edgeCoinExchangeQuote: EdgeCoinExchangeQuote = {
+        depositAmountNative: mul(exchangeData.depositAmount, multiplierFrom),
+        withdrawalAmountNative: mul(
+          exchangeData.withdrawalAmount,
+          multiplierTo
+        ),
+        expiration: exchangeData.expiration,
+        quotedRate: exchangeData.quotedRate,
+        maxLimit: exchangeData.maxLimit,
+        orderId: exchangeData.orderId,
+        edgeTransacton: tx
+      }
+      return edgeCoinExchangeQuote
     },
 
     signTx (tx: EdgeTransaction): Promise<EdgeTransaction> {
@@ -306,6 +443,17 @@ export function makeCurrencyWalletApi (
     '@getDisplayPublicSeed': { sync: true },
     getDisplayPublicSeed (): string | null {
       return engine.getDisplayPublicSeed()
+    },
+
+    getPaymentProtocolInfo (
+      paymentProtocolUrl: string
+    ): Promise<EdgePaymentProtocolInfo> {
+      if (!engine.getPaymentProtocolInfo) {
+        throw new Error(
+          "'getPaymentProtocolInfo' is not implemented on wallets of this type"
+        )
+      }
+      return engine.getPaymentProtocolInfo(paymentProtocolUrl)
     },
 
     saveTxMetadata (txid: string, currencyCode: string, metadata: EdgeMetadata) {
@@ -357,10 +505,6 @@ export function makeCurrencyWalletApi (
       return getMax('0', add(balance, '1'))
     },
 
-    sweepPrivateKey (keyUri: string): Promise<void> {
-      return Promise.resolve()
-    },
-
     '@parseUri': { sync: true },
     parseUri (uri: string) {
       return plugin.parseUri(uri)
@@ -375,7 +519,7 @@ export function makeCurrencyWalletApi (
   return wrapObject('CurrencyWallet', out)
 }
 
-function fixMetadata (metadata: EdgeMetadata, fiat: any) {
+function fixMetadata (metadata: EdgeMetadata, fiat: string) {
   const out = filterObject(metadata, [
     'bizId',
     'category',
@@ -394,22 +538,29 @@ function fixMetadata (metadata: EdgeMetadata, fiat: any) {
 
 export function combineTxWithFile (
   input: CurrencyWalletInput,
-  tx: any,
-  file: any,
+  tx: MergedTransaction,
+  file: TransactionFile,
   currencyCode: string
-) {
+): EdgeTransaction {
   const wallet = input.props.selfOutput.api
   const walletCurrency = input.props.selfState.currencyInfo.currencyCode
   const walletFiat = input.props.selfState.fiat
 
   // Copy the tx properties to the output:
-  const out = {
-    ...tx,
+  const out: EdgeTransaction = {
+    blockHeight: tx.blockHeight,
+    date: tx.date,
+    ourReceiveAddresses: tx.ourReceiveAddresses,
+    signedTx: tx.signedTx,
+    txid: tx.txid,
+
     amountSatoshi: Number(tx.nativeAmount[currencyCode]),
     nativeAmount: tx.nativeAmount[currencyCode],
     networkFee: tx.networkFee[currencyCode],
     currencyCode,
-    wallet
+    wallet,
+
+    otherParams: {}
   }
 
   // These are our fallback values:
@@ -434,7 +585,6 @@ export function combineTxWithFile (
     : fallback
 
   if (file && file.creationDate < out.date) out.date = file.creationDate
-  out.providerFee = merged.providerFeeSent
   out.metadata = merged.metadata
   if (
     merged.metadata &&
@@ -442,7 +592,7 @@ export function combineTxWithFile (
     merged.metadata.exchangeAmount[walletFiat]
   ) {
     out.metadata.amountFiat = merged.metadata.exchangeAmount[walletFiat]
-    if (out.metadata.amountFiat.toString().includes('e')) {
+    if (out.metadata && out.metadata.amountFiat.toString().includes('e')) {
       // Corrupt amountFiat that exceeds a number that JS can cleanly represent without exponents. Set to 0
       out.metadata.amountFiat = 0
     }

@@ -75,7 +75,8 @@ export function makeReactNativeIo (): Promise<EdgeRawIo> {
       pbkdf2,
       scrypt,
       secp256k1,
-      encryptedJsonBox
+      encryptedJsonBox,
+      WebSocket: window.WebSocket
     }
     return io
   })
