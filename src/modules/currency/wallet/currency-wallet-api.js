@@ -229,20 +229,20 @@ export function makeCurrencyWalletApi (
       // Decrypted metadata files
       const files = state.files
       // A sorted list of transaction based on chronological order
-      const sortedTransactions = state.sortedTransactions.sortedList
+      const { sortedList, txidHashes } = state.sortedTransactions
       // The txid hashes that got dropped
       const droppedTxidHashes = {}
       // we need to make sure that after slicing, the total txs number is equal to opts.startEntries
       // slice, verify txs in files, if some are dropped and missing, do it again recursively
       const getBulkTx = async (index: number, out: any = []) => {
-        if (out.length === startEntries || index >= sortedTransactions.length) {
+        if (out.length === startEntries || index >= sortedList.length) {
           return out
         }
         const entriesLeft = startEntries - out.length
-        const slicedTransactions = sortedTransactions.slice(index, index + entriesLeft)
+        const slicedTransactions = sortedList.slice(index, index + entriesLeft)
         // filter the missing files
         const missingTxIdHashes = slicedTransactions.filter(
-          txidHash => !files[txidHash]
+          txidHash => !files[txidHash] && !txidHashes[txidHash].drop[currencyCode]
         )
         // load files into state
         const missingFiles = await loadTxFiles(input, missingTxIdHashes)
