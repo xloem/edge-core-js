@@ -165,7 +165,7 @@ export type CurrencyEngineChangedTxs = {
   payload: {
     txs: Array<any>,
     walletId: string,
-    txidHashes: any
+    txidHashes: { [txidHash: string]: number }
   }
 }
 
@@ -173,6 +173,14 @@ export type CurrencyEngineGotTxs = {
   type: 'CURRENCY_ENGINE_GOT_TXS',
   payload: {
     walletId: string
+  }
+}
+
+export type CurrencyEngineDroppedTxs = {
+  type: 'CURRENCY_ENGINE_DROPPED_TXS',
+  payload: {
+    walletId: string,
+    droppedTxidHashes: { [txid: string]: string }
   }
 }
 
@@ -378,6 +386,7 @@ export type RootAction =
   | CurrencyEngineChangedSyncRatio
   | CurrencyEngineChangedTxs
   | CurrencyEngineGotTxs
+  | CurrencyEngineDroppedTxs
   | CurrencyEngineCleared
   | CurrencyEngineFailed
   | CurrencyPluginsFailed

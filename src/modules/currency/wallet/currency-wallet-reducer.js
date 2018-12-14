@@ -24,7 +24,12 @@ export type TxFileNames = {
 export type TxFileJsons = { [txidHash: string]: Object }
 
 /** Maps from txid hash to creation date. */
-export type TxidHashes = { [txidHash: string]: number }
+export type TxidHashes = {
+  [txidHash: string]: {
+    date: number,
+    drop: { [currencyCode: string]: true }
+  }
+}
 
 export type SortedTransactions = {
   sortedList: Array<string>,
@@ -127,15 +132,24 @@ const currencyWallet = buildReducer({
     state = { txidHashes: {}, sortedList: [] },
     action: RootAction
   ): SortedTransactions {
-    const { txidHashes } = state
+    const { txidHashes, sortedList } = state
     switch (action.type) {
       case 'CURRENCY_ENGINE_CHANGED_TXS': {
         return sortTxs(txidHashes, action.payload.txidHashes)
       }
+      case 'CURRENCY_ENGINE_DROPPED_TXS': {
+        const newHashes = { ...txidHashes }
+        const { droppedTxidHashes } = action.payload
+        for (const txid in droppedTxidHashes) {
+          const currencyCode = droppedTxidHashes[txid]
+          newHashes[txid].drop[currencyCode] = true
+        }
+        return { sortedList, txidHashes: newHashes }
+      }
       case 'CURRENCY_WALLET_FILE_NAMES_LOADED': {
         const { txFileNames } = action.payload
         const newTxidHashes = {}
-        Object.keys(txFileNames).map(txidHash => {
+        Object.keys(txFileNames).forEach(txidHash => {
           newTxidHashes[txidHash] = txFileNames[txidHash].creationDate
         })
         return sortTxs(txidHashes, newTxidHashes)
@@ -239,17 +253,22 @@ const currencyWallet = buildReducer({
   }
 })
 
-export function sortTxs (txidHashes: TxidHashes, newHashes: TxidHashes) {
+export function sortTxs (txidHashes: TxidHashes, newHashes: { [txidHash: string]: number }) {
   for (const newTxidHash in newHashes) {
     const newTime = newHashes[newTxidHash]
-    if (!txidHashes[newTxidHash] || newTime < txidHashes[newTxidHash]) {
-      txidHashes[newTxidHash] = newTime
+    if (!txidHashes[newTxidHash]) {
+      txidHashes[newTxidHash] = {
+        date: newHashes[newTxidHash],
+        drop: {}
+      }
+    } else if (newTime < txidHashes[newTxidHash].date) {
+      txidHashes[newTxidHash].date = newTime
     }
   }
   const sortedList: Array<string> = Object.keys(txidHashes).sort(
     (txidHash1, txidHash2) => {
-      if (txidHashes[txidHash1] > txidHashes[txidHash2]) return -1
-      if (txidHashes[txidHash1] < txidHashes[txidHash2]) return 1
+      if (txidHashes[txidHash1].date > txidHashes[txidHash2].date) return -1
+      if (txidHashes[txidHash1].date < txidHashes[txidHash2].date) return 1
       return 0
     }
   )

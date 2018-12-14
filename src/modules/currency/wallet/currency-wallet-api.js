@@ -230,6 +230,8 @@ export function makeCurrencyWalletApi (
       const files = state.files
       // A sorted list of transaction based on chronological order
       const sortedTransactions = state.sortedTransactions.sortedList
+      // The txid hashes that got dropped
+      const droppedTxidHashes = {}
       // we need to make sure that after slicing, the total txs number is equal to opts.startEntries
       // slice, verify txs in files, if some are dropped and missing, do it again recursively
       const getBulkTx = async (index: number, out: any = []) => {
@@ -237,7 +239,7 @@ export function makeCurrencyWalletApi (
           return out
         }
         const entriesLeft = startEntries - out.length
-        const slicedTransactions = sortedList.slice(index, index + entriesLeft)
+        const slicedTransactions = sortedTransactions.slice(index, index + entriesLeft)
         // filter the missing files
         const missingTxIdHashes = slicedTransactions.filter(
           txidHash => !files[txidHash]
@@ -246,17 +248,18 @@ export function makeCurrencyWalletApi (
         const missingFiles = await loadTxFiles(input, missingTxIdHashes)
         Object.assign(files, missingFiles)
 
-        for (const txidHash of slicedTransactions) {
+        for (let j = 0; j < slicedTransactions.length; j++) {
+          const txidHash = slicedTransactions[j]
           const file = files[txidHash]
           const tx = txs[file.txid]
-          // skip irrelevant transactions - txs that are not in the files (dropped)
-          if (
-            !tx ||
-            (!tx.nativeAmount[currencyCode] && !tx.networkFee[currencyCode])
-          ) {
-            continue
+          // skip irrelevant transactions - txs that are not in the plugin (dropped) or that are not the same currency type (tokens)
+          if (!tx) {
+            droppedTxidHashes[txidHash] = 'All'
+          } else if ((!tx.nativeAmount[currencyCode] && !tx.networkFee[currencyCode])) {
+            droppedTxidHashes[txidHash] = currencyCode
+          } else {
+            out.push(combineTxWithFile(input, tx, file, currencyCode))
           }
-          out.push(combineTxWithFile(input, tx, file, currencyCode))
         }
         // continue until the required tx number loaded
         const res = await getBulkTx(index + entriesLeft, out)
@@ -264,6 +267,14 @@ export function makeCurrencyWalletApi (
       }
 
       const out: Array<EdgeTransaction> = await getBulkTx(startIndex)
+      input.props.dispatch({
+        type: 'CURRENCY_ENGINE_DROPPED_TXS',
+        payload: {
+          walletId: input.props.id,
+          droppedTxidHashes
+        }
+      })
+
       return out
     },
 
