@@ -253,7 +253,10 @@ const currencyWallet = buildReducer({
   }
 })
 
-export function sortTxs (txidHashes: TxidHashes, newHashes: { [txidHash: string]: number }) {
+export function sortTxs (
+  txidHashes: TxidHashes,
+  newHashes: { [txidHash: string]: number }
+) {
   for (const newTxidHash in newHashes) {
     const newTime = newHashes[newTxidHash]
     if (!txidHashes[newTxidHash]) {

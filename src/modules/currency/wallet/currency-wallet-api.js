@@ -242,7 +242,8 @@ export function makeCurrencyWalletApi (
         const slicedTransactions = sortedList.slice(index, index + entriesLeft)
         // filter the missing files
         const missingTxIdHashes = slicedTransactions.filter(
-          txidHash => !files[txidHash] && !txidHashes[txidHash].drop[currencyCode]
+          txidHash =>
+            !files[txidHash] && !txidHashes[txidHash].drop[currencyCode]
         )
         // load files into state
         const missingFiles = await loadTxFiles(input, missingTxIdHashes)
@@ -255,7 +256,10 @@ export function makeCurrencyWalletApi (
           // skip irrelevant transactions - txs that are not in the plugin (dropped) or that are not the same currency type (tokens)
           if (!tx) {
             droppedTxidHashes[txidHash] = 'All'
-          } else if ((!tx.nativeAmount[currencyCode] && !tx.networkFee[currencyCode])) {
+          } else if (
+            !tx.nativeAmount[currencyCode] &&
+            !tx.networkFee[currencyCode]
+          ) {
             droppedTxidHashes[txidHash] = currencyCode
           } else {
             out.push(combineTxWithFile(input, tx, file, currencyCode))
