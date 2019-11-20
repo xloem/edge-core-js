@@ -1,81 +1,41 @@
 #!/usr/bin/env node
 
-const { babel } = require('@rollup/plugin-babel')
-const { makeNodeDisklet } = require('disklet')
-const eslint = require('eslint')
-const { rollup } = require('rollup')
+const babel = require('@babel/core')
+const flowgen = require('flowgen')
+const fs = require('fs')
+const prettier = require('prettier')
 
-function jsToTs(code) {
-  const output = code
-    // Change `+x` to `readonly x`:
-    .replace(/(\n *)\+(\[?[_a-zA-Z0-9]+)/g, '$1readonly $2')
-    // Fix differently-named types:
-    .replace(/\bmixed\b/g, 'unknown')
-    .replace(/\| void\b/g, '| undefined')
-    .replace(/: void\b/g, ': undefined')
-    .replace(/\$Shape</g, 'Partial<')
-    // Fix `import type` syntax:
-    .replace(/\bimport type\b/g, 'import')
-    .replace(/\btype ([_a-zA-Z0-9]+)( *[,\n}])/g, '$1$2')
-    // We aren't JS anymore:
-    .replace(/\/\/ @flow/, '')
-    .replace(/'(\.[^']*)\.js'/, "'$1'")
-
-  return output
+function tsToFlow(filename) {
+  let flow = flowgen.compiler.compileDefinitionFile(filename, {
+    inexact: false,
+    interfaceRecords: true
+  })
+  const header = '// @flow\n' + '/* eslint-disable no-use-before-define */\n'
+  flow = prettier.format(header + flow, {
+    parser: 'babel',
+    semi: false,
+    singleQuote: true
+  })
+  flow = flow.replace(/import {/g, 'import type {')
+  flow = flow.replace(/declare export {/, 'export type {')
+  return flow
 }
 
-const files = [
-  { js: 'src/types/error.js', ts: 'lib/types/error.ts' },
-  { js: 'src/types/exports.js', ts: 'lib/types/exports.ts' },
-  { js: 'src/types/types.js', ts: 'lib/types/types.ts' },
-  { js: 'src/types/server-types.js', ts: 'lib/types/server-types.ts' },
-  { js: 'src/types/server-cleaners.js', ts: 'lib/types/server-cleaners.ts' }
-]
+// Assemble the Flow types:
+let flowTypes = tsToFlow('./src/types/types.ts')
+flowTypes = flowTypes.replace(/'.\/error'/, "'./error.js.flow'")
+flowTypes += '\n' + fs.readFileSync('src/types/entries.js.flow', 'utf8')
+fs.writeFileSync('./index.js.flow', flowTypes)
+fs.writeFileSync('./types.js.flow', flowTypes)
+const errorTypes = tsToFlow('./src/types/error.ts')
+fs.writeFileSync('./error.js.flow', errorTypes)
 
-async function main() {
-  const disklet = makeNodeDisklet('.')
-  await disklet.setText(
-    'lib/types/index.ts',
-    "export * from './types'\n" + "export * from './exports'\n"
-  )
-
-  // Transpile error classes to plain Javascript for use by core plugins:
-  const bundle = await rollup({
-    external: ['cleaners', 'rfc4648'],
-    input: './src/types/types.js',
-    plugins: [
-      babel({
-        babelHelpers: 'bundled',
-        babelrc: false,
-        plugins: ['babel-plugin-transform-fake-error-class'],
-        presets: ['@babel/preset-flow']
-      })
-    ]
-  })
-  await bundle.write({
-    file: './types.js',
-    format: 'cjs'
-  })
-  await bundle.close()
-
-  // Transpile Flow types to Typescript:
-  for (const file of files) {
-    const js = await disklet.getText(file.js, 'utf8')
-    await disklet.setText(file.ts, jsToTs(js))
-  }
-
-  // Fix the Typescript files with ESLint:
-  const cli = new eslint.CLIEngine({ fix: true, ignore: false })
-  const report = cli.executeOnFiles(['./lib/types/*.ts'])
-  eslint.CLIEngine.outputFixes(report)
-  if (eslint.CLIEngine.getErrorResults(report.results).length > 0) {
-    throw new Error(
-      'Conversion to TypeScript failed. Please run `npx eslint --no-ignore lib/types/*.ts` to see errors.'
-    )
-  }
-}
-
-main().catch(e => {
-  console.error(e)
-  process.exit(1)
-})
+// Transpile errors to plain Javascript:
+const errorJs = babel.transformFileSync('src/types/error.ts', {
+  presets: ['@babel/preset-typescript'],
+  plugins: [
+    '@babel/plugin-transform-modules-commonjs',
+    'babel-plugin-transform-fake-error-class'
+  ]
+}).code
+fs.writeFileSync('types.js', errorJs)
