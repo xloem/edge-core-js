@@ -120,7 +120,9 @@ export async function requestEdgeLogin(
   const cleanups = [
     lobby.close,
     lobby.on('error', handleError),
-    lobby.on('reply', reply => handleReply(reply).catch(handleError))
+    lobby.on('reply', reply => {
+      handleReply(reply).catch(handleError)
+    })
   ]
 
   const out = {

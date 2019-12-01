@@ -39,7 +39,7 @@ async function loginPasswordOffline(
   const loginKey = decrypt(passwordBox, passwordKey)
   const loginTree = makeLoginTree(stashTree, loginKey)
   stashTree.lastLogin = now
-  saveStash(ai, stashTree)
+  saveStash(ai, stashTree).catch(() => undefined)
 
   // Since we logged in offline, update the stash in the background:
   // TODO: If the user provides an OTP token, add that to the stash.

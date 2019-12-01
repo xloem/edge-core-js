@@ -139,7 +139,10 @@ function applyLoginPayloadInner(
       throw new Error('Key integrity violation: No parentBox on child login.')
     }
     const childKey = decrypt(child.parentBox, loginKey)
-    const childStash = stashChildren[index] != null ? stashChildren[index] : {}
+    const childStash: LoginStash =
+      stashChildren[index] != null
+        ? stashChildren[index]
+        : { appId: child.appId, loginId: child.loginId, pendingVouchers: [] }
     return applyLoginPayloadInner(childStash, childKey, child)
   })
 
@@ -357,7 +360,7 @@ export async function serverLogin(
             stash.voucherAuth = base64.parse(otpError.voucherAuth)
           }
           stashTree.lastLogin = now
-          saveStash(ai, stashTree)
+          saveStash(ai, stashTree).catch(() => undefined)
         }
         throw error
       }
