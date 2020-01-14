@@ -15,6 +15,7 @@ import {
   EdgeFakeWorld,
   EdgeFakeWorldOptions,
   EdgeFetchOptions,
+  EdgeFetchResponse,
   EdgeLoginMessages,
   EdgeLogSettings,
   EdgeNativeIo,
@@ -25,6 +26,9 @@ import { timeout } from './util/promise'
 
 export { makeFakeIo } from './core/fake/fake-io'
 export * from './types/types'
+
+// @ts-ignore `window` doesn't exist in React Native
+const global: any = typeof window !== 'undefined' ? window : {}
 
 function onErrorDefault(e: any): void {
   console.error(e)
@@ -170,8 +174,9 @@ export async function fetchLoginMessages(
     body: JSON.stringify({ loginIds: Object.keys(loginMap) })
   }
 
+  const responsePromise: Promise<EdgeFetchResponse> = global.fetch(uri, opts)
   return timeout(
-    window.fetch(uri, opts),
+    responsePromise,
     30000,
     new NetworkError('Could not reach the auth server: timeout')
   ).then(response => {
