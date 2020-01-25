@@ -13,8 +13,6 @@
     "simple-import-sort"
   ],
   "rules": {
-    "@typescript-eslint/strict-boolean-expressions": "off",
-
     "@typescript-eslint/default-param-last": "off",
     "@typescript-eslint/no-dynamic-delete": "off",
     "@typescript-eslint/no-empty-function": "off",
