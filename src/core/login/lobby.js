@@ -26,7 +26,7 @@ export type PartialLobbyRequest = $Shape<EdgeLobbyRequest>
 const EC = elliptic.ec
 const secp256k1 = new EC('secp256k1')
 
-type Keypair = Object
+type Keypair = elliptic.ec.KeyPair
 
 type LobbyEvents = {
   error: mixed,
@@ -113,7 +113,7 @@ export async function makeLobby(
   // Create the task:
   const [on, emit]: Events<LobbyEvents> = makeEvents()
   const replies = []
-  const pollLobby = async () => {
+  const pollLobby = async (): Promise<void> => {
     const clean = asLobbyPayload(
       await loginFetch(ai, 'GET', '/v2/lobby/' + lobbyId, {})
     )
