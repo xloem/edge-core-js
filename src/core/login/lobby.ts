@@ -107,7 +107,7 @@ export async function makeLobby(
 
   // Create the task:
   const [on, emit]: Events<LobbyEvents> = makeEvents()
-  const replies = []
+  const replies: unknown[] = []
   const pollLobby = async (): Promise<void> => {
     const clean = asLobbyPayload(
       await loginFetch(ai, 'GET', '/v2/lobby/' + lobbyId, {})

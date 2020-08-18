@@ -142,9 +142,10 @@ export async function loadAllWalletStates(
   ])
 
   // Merge all that information together:
-  const legacyWalletInfos: EdgeWalletInfo[] = [].concat(
-    ...legacyLists.map(files => files.walletInfos)
-  )
+  const legacyWalletInfos: EdgeWalletInfo[] = []
+  for (const files of legacyLists) {
+    legacyWalletInfos.push(...files.walletInfos)
+  }
   const legacyWalletStates: EdgeWalletStates[] = legacyLists.map(
     files => files.walletStates
   )
@@ -229,8 +230,10 @@ export async function changePluginUserSettings(
 
   // Write the new state to disk:
   const json: PluginSettingsFile = await getJson(file)
-  json.userSettings = { ...ai.props.state.accounts[accountId].userSettings }
-  json.userSettings[pluginId] = userSettings
+  json.userSettings = {
+    ...ai.props.state.accounts[accountId].userSettings,
+    [pluginId]: userSettings
+  }
   await file.setText(JSON.stringify(json))
 
   // Update Redux:
@@ -261,8 +264,10 @@ export async function changeSwapSettings(
 
   // Write the new state to disk:
   const json: PluginSettingsFile = await getJson(file)
-  json.swapSettings = { ...ai.props.state.accounts[accountId].swapSettings }
-  json.swapSettings[pluginId] = swapSettings
+  json.swapSettings = {
+    ...ai.props.state.accounts[accountId].swapSettings,
+    [pluginId]: swapSettings
+  }
   await file.setText(JSON.stringify(json))
 
   // Update Redux:

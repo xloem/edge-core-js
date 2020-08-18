@@ -11,7 +11,8 @@ import { close, emit, update } from 'yaob'
 import {
   asMaybeOtpError,
   EdgeAccount,
-  EdgeCurrencyWallet
+  EdgeCurrencyWallet,
+  EdgeWalletInfoFull
 } from '../../types/types'
 import { makePeriodicTask } from '../../util/periodic-task'
 import { syncAccount } from '../login/login'
@@ -107,13 +108,15 @@ const accountPixie: TamePixie<AccountProps> = combinePixies({
       async function doDataSync(): Promise<void> {
         const ai: ApiInput = input as any // Safe, since input extends ApiInput
         const accountId = input.props.id
-        const { accountWalletInfos } = input.props.selfState
+        const accountWalletInfos: EdgeWalletInfoFull[] =
+          input.props.selfState.accountWalletInfos
 
         if (input.props.state.accounts[accountId] == null) return
         const changeLists = await Promise.all(
           accountWalletInfos.map(info => syncStorageWallet(ai, info.id))
         )
-        const changes: string[] = [].concat(...changeLists)
+        const changes: string[] = []
+        for (const list of changeLists) changes.push(...list)
         if (changes.length) {
           await Promise.all([
             reloadPluginSettings(ai, accountId),
