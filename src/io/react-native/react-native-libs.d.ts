@@ -7,10 +7,10 @@
 declare module 'react-native' {
   interface NativeModules {
     RNRandomBytes: {
-      randomBytes(
+      randomBytes: (
         bytes: number,
         callback: (error: any, base64String: string) => void
-      ): void
+      ) => void
     }
   }
   const NativeModules: NativeModules
@@ -21,7 +21,7 @@ declare module 'react-native' {
   const Platform: any
 
   interface StyleSheet {
-    create<T>(template: T): T
+    create: <T>(template: T) => T
   }
   const StyleSheet: any
 

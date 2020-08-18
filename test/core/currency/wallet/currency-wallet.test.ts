@@ -150,7 +150,7 @@ describe('currency wallets', function () {
       assert.equal(txs.length, 1)
       assert.equal(txs[0].txid, 'a')
       assert.strictEqual(txs[0].nativeAmount, '2')
-      // @ts-ignore legacy support code
+      // @ts-expect-error legacy support code
       assert.strictEqual(txs[0].amountSatoshi, 2)
     })
 
@@ -158,7 +158,7 @@ describe('currency wallets', function () {
       assert.equal(txs.length, 1)
       assert.equal(txs[0].txid, 'b')
       assert.strictEqual(txs[0].nativeAmount, '200')
-      // @ts-ignore legacy support code
+      // @ts-expect-error legacy support code
       assert.strictEqual(txs[0].amountSatoshi, 200)
     })
   })

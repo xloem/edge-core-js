@@ -14,7 +14,6 @@ export interface ScryptOutput {
   ) => Promise<{ hash: Uint8Array; time: number }>
 }
 
-// @ts-ignore `window` doesn't exist in React Native
 const global: any = typeof window !== 'undefined' ? window : {}
 
 /**

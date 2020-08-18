@@ -3,7 +3,6 @@ import { makeLocalStorageDisklet } from 'disklet'
 import { EdgeFetchOptions, EdgeFetchResponse, EdgeIo } from '../../types/types'
 import { scrypt } from '../../util/crypto/scrypt'
 
-// @ts-ignore `window` doesn't exist in React Native
 const global: any = typeof window !== 'undefined' ? window : {}
 
 /**

@@ -15,7 +15,6 @@ import { EdgeFetchOptions, EdgeFetchResponse, EdgeIo } from '../../types/types'
 import { makeFetchResponse } from '../../util/http/http-to-fetch'
 import { ClientIo, WorkerApi } from './react-native-types'
 
-// @ts-ignore `window` doesn't exist in React Native
 const global: any = typeof window !== 'undefined' ? window : {}
 const body = global.document.body
 

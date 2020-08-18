@@ -231,7 +231,7 @@ export function makeContextApi(ai: ApiInput): EdgeContext {
       return this.pinLoginEnabled(username)
     }
   }
-  // @ts-ignore: This isn't supposed to be here:
+  // @ts-expect-error: This isn't supposed to be here:
   out.$internalStuff = new EdgeInternalStuff(ai)
   bridgifyObject(out)
 
