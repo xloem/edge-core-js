@@ -45,7 +45,7 @@ describe('edge login lobby', function () {
       lobby.watch('replies', (replies: unknown[]) => {
         if (replies.length === 0) return
         expect(replies[0]).deep.equals(testReply)
-        resolve()
+        resolve(undefined)
       })
     })
 

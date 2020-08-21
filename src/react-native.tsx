@@ -27,7 +27,6 @@ import { timeout } from './util/promise'
 export { makeFakeIo } from './core/fake/fake-io'
 export * from './types/types'
 
-// @ts-ignore `window` doesn't exist in React Native
 const global: any = typeof window !== 'undefined' ? window : {}
 
 function onErrorDefault(e: any): void {
@@ -46,8 +45,8 @@ export function MakeEdgeContext(props: {
   options?: EdgeContextOptions
 
   // EdgeContextOptions:
-  apiKey?: string
-  appId?: string
+  apiKey: string
+  appId: string
   authServer?: string
   crashReporter?: EdgeCrashReporter
   deviceDescription?: string
@@ -55,7 +54,7 @@ export function MakeEdgeContext(props: {
   logSettings?: Partial<EdgeLogSettings>
   onLog?: EdgeOnLog
   plugins?: EdgeCorePluginsInit
-}): React.Node {
+}): React.ReactNode {
   const { debug, nativeIo, onError = onErrorDefault, onLoad, ...rest } = props
   if (onLoad == null) {
     throw new TypeError('No onLoad passed to MakeEdgeContext')
@@ -95,7 +94,7 @@ export function MakeFakeEdgeWorld(
     onLoad: (world: EdgeFakeWorld) => unknown
     users?: EdgeFakeUser[]
   }
-): React.Node {
+): React.ReactNode {
   const {
     crashReporter,
     debug,

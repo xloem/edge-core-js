@@ -7,6 +7,7 @@ import {
 import { LoginRequestBody } from '../../types/server-types'
 import {
   EdgeFetchOptions,
+  EdgeIo,
   NetworkError,
   ObsoleteApiError,
   OtpError,
@@ -57,7 +58,8 @@ export function loginFetch(
   path: string,
   body?: LoginRequestBody
 ): Promise<unknown> {
-  const { state, io, log } = ai.props
+  const { state, log } = ai.props
+  const io: EdgeIo = ai.props.io // Pending pixie types
   const { apiKey, serverUri } = state.login
 
   const opts: EdgeFetchOptions = {
@@ -84,7 +86,7 @@ export function loginFetch(
         throw new Error(`Invalid reply JSON, HTTP status ${response.status}`)
       })
     },
-    networkError => {
+    (networkError: any) => {
       const time = Date.now() - start
       log.error(
         `${method} ${fullUri} failed in ${time}ms, ${String(networkError)}`

@@ -7,12 +7,11 @@ import { RootAction } from './actions'
 import { filterLogs, LogBackend, makeLegacyConsole, makeLog } from './log/log'
 import { loadStashes } from './login/login-stash'
 import { PluginIos, watchPlugins } from './plugins/plugins-actions'
-import { rootPixie, RootProps } from './root-pixie'
+import { RootOutput, rootPixie, RootProps } from './root-pixie'
 import { defaultLogSettings, reducer, RootState } from './root-reducer'
 
 let allContexts: EdgeContext[] = []
 
-// @ts-ignore `window` doesn't exist in React Native
 const global: any = typeof window !== 'undefined' ? window : {}
 
 const composeEnhancers =
@@ -45,7 +44,7 @@ export async function makeContext(
   }
 
   // Create a redux store:
-  const enhancers: StoreEnhancer<RootState, RootAction> = composeEnhancers()
+  const enhancers: StoreEnhancer<RootState> = composeEnhancers()
   const redux = createStore(reducer, enhancers)
 
   // Create a log wrapper, using the settings from redux:
@@ -102,7 +101,7 @@ export async function makeContext(
   )
 
   // Start the pixie tree:
-  const mirror = { output: {} }
+  const mirror: { output: RootOutput } = { output: {} as any }
   const closePixie = attachPixie(
     redux,
     filterPixie(

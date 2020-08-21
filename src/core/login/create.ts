@@ -15,7 +15,7 @@ import { ApiInput } from '../root-pixie'
 import { makeKeysKit } from './keys'
 import { loginFetch } from './login-fetch'
 import { fixUsername, hashUsername } from './login-selectors'
-import { saveStash } from './login-stash'
+import { LoginStash, saveStash } from './login-stash'
 import { LoginKit, LoginTree } from './login-types'
 import { makePasswordKit } from './password'
 import { makeChangePin2Kit } from './pin2'
@@ -77,7 +77,7 @@ export function makeCreateKit(
   }
 
   // Set up login methods:
-  const dummyKit: LoginKit = {}
+  const dummyKit: LoginKit = {} as any
   const parentBox =
     parentLogin != null
       ? encrypt(io, loginKey, parentLogin.loginKey)
@@ -110,15 +110,15 @@ export function makeCreateKit(
       loginId,
       serverPath: '/v2/login/create',
       server: {
-        ...wasCreateLoginPayload({
+        ...(wasCreateLoginPayload({
           appId,
           loginId,
           parentBox
-        }),
-        ...keysKit.server,
-        ...passwordKit.server,
-        ...pin2Kit.server,
-        ...secretServer
+        }) as {}),
+        ...(keysKit.server as {}),
+        ...(passwordKit.server as {}),
+        ...(pin2Kit.server as {}),
+        ...(secretServer as {})
       },
       stash: {
         appId,
@@ -164,6 +164,6 @@ export async function createLogin(
   await loginFetch(ai, 'POST', kit.serverPath, request)
 
   kit.stash.lastLogin = now
-  await saveStash(ai, kit.stash)
-  return kit.login
+  await saveStash(ai, kit.stash as LoginStash)
+  return kit.login as LoginTree
 }

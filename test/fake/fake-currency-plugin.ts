@@ -50,7 +50,18 @@ export const fakeCurrencyInfo: EdgeCurrencyInfo = {
   transactionExplorer: 'https://edge.app'
 }
 
-const nop: Function = () => {}
+const blankTx: EdgeTransaction = {
+  blockHeight: 0,
+  currencyCode: 'FAKE',
+  date: GENESIS_BLOCK,
+  nativeAmount: '0',
+  networkFee: '0',
+  ourReceiveAddresses: [],
+  signedTx: '',
+  txid: ''
+}
+
+function nop(): void {}
 
 interface State {
   balance: number
@@ -77,10 +88,10 @@ class FakeCurrencyEngine {
       txs: {}
     }
     // Fire initial callbacks:
-    this._updateState(this.state)
+    this.updateState(this.state)
   }
 
-  _updateState(settings: State): void {
+  private updateState(settings: State): void {
     const state = this.state
     const {
       onAddressesChecked = nop,
@@ -117,15 +128,7 @@ class FakeCurrencyEngine {
     if (typeof settings.txs === 'object' && settings.txs != null) {
       const changes: EdgeTransaction[] = []
       for (const txid in settings.txs) {
-        const newTx: EdgeTransaction = {
-          blockHeight: 0,
-          date: GENESIS_BLOCK,
-          nativeAmount: '0',
-          networkFee: '0',
-          ourReceiveAddresses: [],
-          ...settings.txs[txid],
-          txid
-        }
+        const newTx = { ...blankTx, ...settings.txs[txid], txid }
         const oldTx = state.txs[txid]
 
         if (oldTx == null || !compare(oldTx, newTx)) {
@@ -139,7 +142,7 @@ class FakeCurrencyEngine {
   }
 
   async changeUserSettings(settings: JsonObject): Promise<void> {
-    await this._updateState(settings)
+    await this.updateState(settings as any)
   }
 
   // Keys:
@@ -227,7 +230,7 @@ class FakeCurrencyEngine {
     return { publicAddress: 'fakeaddress' }
   }
 
-  addGapLimitAddresses(addresses: string[]): void {}
+  async addGapLimitAddresses(addresses: string[]): Promise<void> {}
 
   isAddressUsed(address: string): boolean {
     return address === 'fakeaddress'

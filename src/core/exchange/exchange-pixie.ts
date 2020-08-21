@@ -175,7 +175,7 @@ function fetchPluginRates(
 function isNewPair(
   fromCurrency: string,
   toCurrency: string,
-  pairs: Object[]
+  pairs: Array<{ fromCurrency: string; toCurrency: string }>
 ): boolean {
   for (const pair of pairs) {
     if (pair.fromCurrency === fromCurrency && pair.toCurrency === toCurrency)
