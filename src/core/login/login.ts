@@ -135,7 +135,7 @@ function applyLoginPayloadInner(
     throw new Error('The server has lost children!')
   }
   out.children = replyChildren.map((child, index) => {
-    if (!child.parentBox) {
+    if (child.parentBox == null) {
       throw new Error('Key integrity violation: No parentBox on child login.')
     }
     const childKey = decrypt(child.parentBox, loginKey)
@@ -254,7 +254,7 @@ function makeLoginTreeInner(
 
   // Recurse into children:
   login.children = stashChildren.map(child => {
-    if (!child.parentBox) {
+    if (child.parentBox == null) {
       throw new Error('Key integrity violation: No parentBox on child login.')
     }
     const childKey = decrypt(child.parentBox, loginKey)
@@ -407,7 +407,7 @@ export async function applyKit(
 ): Promise<LoginTree> {
   const { loginId, serverMethod = 'POST', serverPath } = kit
   const login = searchTree(loginTree, login => login.loginId === loginId)
-  if (!login) throw new Error('Cannot apply kit: missing login')
+  if (login == null) throw new Error('Cannot apply kit: missing login')
 
   const { stashTree } = getStashById(ai, loginId)
   const request = makeAuthJson(stashTree, login)

@@ -103,7 +103,7 @@ export function syncRepo(
         request.changes[change.name] = change.json
       }
     }
-    const method = request.changes ? 'POST' : 'GET'
+    const method = request.changes != null ? 'POST' : 'GET'
 
     // Calculate the URI:
     let path = `/api/v2/store/${base16.stringify(syncKey).toLowerCase()}`

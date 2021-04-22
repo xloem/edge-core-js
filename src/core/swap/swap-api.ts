@@ -14,6 +14,7 @@ import {
   EdgeSwapRequestOptions
 } from '../../types/types'
 import { fuzzyTimeout } from '../../util/promise'
+import { AccountState } from '../account/account-reducer'
 import { ApiInput } from '../root-pixie'
 
 /**
@@ -28,7 +29,7 @@ export async function fetchSwapQuote(
   const { preferPluginId, disabled = {}, promoCodes = {} } = opts
   const { log } = ai.props
 
-  const account = ai.props.state.accounts[accountId]
+  const account: AccountState = ai.props.state.accounts[accountId]
   const { swapSettings, userSettings } = account
   const swapPlugins = ai.props.state.plugins.swap
 

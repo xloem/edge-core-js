@@ -124,7 +124,7 @@ export async function checkPassword(
   password: string
 ): Promise<boolean> {
   const { username, passwordAuth } = login
-  if (!username || !passwordAuth) return false
+  if (username == null || passwordAuth == null) return false
 
   // Derive passwordAuth:
   const up = makeHashInput(username, password)

@@ -36,7 +36,7 @@ const storageWalletReducer: Reducer<StorageWalletState> = combineReducers({
   lastChanges(state = [], action: RootAction): string[] {
     if (action.type === 'STORAGE_WALLET_SYNCED') {
       const { changes } = action.payload
-      return changes.length ? changes : state
+      return changes.length > 0 ? changes : state
     }
     return state
   },

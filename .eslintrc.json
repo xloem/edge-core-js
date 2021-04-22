@@ -15,7 +15,7 @@
   "rules": {
     "@typescript-eslint/default-param-last": "off",
     "@typescript-eslint/no-dynamic-delete": "off",
-    "@typescript-eslint/strict-boolean-expressions": "off",
+    // "@typescript-eslint/strict-boolean-expressions": "off",
 
     "@typescript-eslint/no-invalid-void-type": "off",
     "@typescript-eslint/prefer-optional-chain": "off",
