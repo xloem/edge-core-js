@@ -16,6 +16,11 @@ function tsToFlow(filename) {
     semi: false,
     singleQuote: true
   })
+
+  // Problems in error.js:
+  flow = flow.replace(/.*from 'rfc4648'/, '')
+  flow = flow.replace(/.*from '.\/server-cleaners'/, '')
+
   flow = flow.replace(/import {/g, 'import type {')
   flow = flow.replace(/declare export {/, 'export type {')
   return flow
