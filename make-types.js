@@ -10,6 +10,7 @@ function tsToFlow(filename) {
     inexact: false,
     interfaceRecords: true
   })
+
   const header = '// @flow\n' + '/* eslint-disable no-use-before-define */\n'
   flow = prettier.format(header + flow, {
     parser: 'babel',

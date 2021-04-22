@@ -12,7 +12,7 @@ function assign(out: any): any {
     if (from == null) continue
 
     for (const key in from) {
-      if (Object.prototype.hasOwnProperty.call(from, key) as boolean) {
+      if (Object.prototype.hasOwnProperty.call(from, key)) {
         out[key] = from[key]
       }
     }
@@ -49,7 +49,7 @@ function find(
 ): any {
   for (let i = 0; i < this.length; ++i) {
     const value = this[i]
-    if (test.call(testThis, value, i, this) as boolean) {
+    if (test.call(testThis, value, i, this)) {
       return value
     }
   }

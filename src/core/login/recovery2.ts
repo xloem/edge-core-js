@@ -145,7 +145,7 @@ export function makeRecovery2Kit(
     throw new TypeError('Answers must be an array of strings')
   }
 
-  const recovery2Key = login.recovery2Key || io.random(32)
+  const { recovery2Key = io.random(32) } = login
   const question2Box = encrypt(
     io,
     utf8.parse(JSON.stringify(questions)),

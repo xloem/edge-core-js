@@ -179,7 +179,7 @@ export function makeChangePin2Kit(
   const pin2TextBox = encrypt(io, utf8.parse(pin), login.loginKey)
 
   if (enableLogin) {
-    const pin2Key = login.pin2Key || io.random(32)
+    const { pin2Key = io.random(32) } = login
     const pin2Box = encrypt(io, login.loginKey, pin2Key)
     const pin2KeyBox = encrypt(io, pin2Key, login.loginKey)
 
