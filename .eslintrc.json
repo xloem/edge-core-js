@@ -20,9 +20,14 @@
     "flowtype/array-style-complex-type": ["error", "verbose"],
     "flowtype/array-style-simple-type": ["error", "shorthand"],
 
+    "@typescript-eslint/default-param-last": "off",
+    "@typescript-eslint/no-dynamic-delete": "off",
     "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/no-invalid-void-type": "off",
+    "@typescript-eslint/prefer-optional-chain": "off",
     "@typescript-eslint/promise-function-async": "off",
     "@typescript-eslint/require-await": "off",
+    "@typescript-eslint/restrict-template-expressions": "off",
     "no-var": "error",
     "simple-import-sort/imports": "error"
   }
