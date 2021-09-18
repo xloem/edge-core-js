@@ -431,6 +431,7 @@ export type EdgeTxidMap = { [txid: string]: number }
 export type EdgeParsedUri = {
   token?: EdgeMetaToken,
   privateKeys?: string[],
+  publicKeys?: string[],
   publicAddress?: string,
   legacyAddress?: string,
   segwitAddress?: string,
@@ -453,7 +454,9 @@ export type EdgeEncodeUri = {
   nativeAmount?: string,
   label?: string,
   message?: string,
-  currencyCode?: string
+  currencyCode?: string,
+  privateKeys?: string[],
+  publicKeys?: string[]
 }
 
 // options -------------------------------------------------------------
